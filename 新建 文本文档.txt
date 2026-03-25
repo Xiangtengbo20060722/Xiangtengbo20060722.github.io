@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 渐变立方体</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a3a);
+            margin: 0;
+            perspective: 800px;
+        }
+
+        .cube {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            transform-style: preserve-3d;
+            animation: rotate 8s infinite linear;
+        }
+
+        .face {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 前面 */
+        .front {
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            transform: translateZ(100px);
+        }
+
+        /* 后面 */
+        .back {
+            background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            transform: translateZ(-100px) rotateY(180deg);
+        }
+
+        /* 右面 */
+        .right {
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            transform: translateX(100px) rotateY(90deg);
+        }
+
+        /* 左面 */
+        .left {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            transform: translateX(-100px) rotateY(-90deg);
+        }
+
+        /* 上面 */
+        .top {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            transform: translateY(-100px) rotateX(90deg);
+        }
+
+        /* 下面 */
+        .bottom {
+            background: linear-gradient(135deg, #30cfd0, #330867);
+            transform: translateY(100px) rotateX(-90deg);
+        }
+
+        /* 添加一点点倾斜效果增强 3D 感（skewX/skewY 可选，这里在 hover 时展示） */
+        .cube:hover .right {
+            transform: translateX(100px) rotateY(90deg) skewY(5deg);
+        }
+
+        .cube:hover .left {
+            transform: translateX(-100px) rotateY(-90deg) skewY(-5deg);
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotateX(0) rotateY(0);
+            }
+            to {
+                transform: rotateX(360deg) rotateY(360deg);
+            }
+        }
+
+        /* 说明文字 */
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px;
+            margin: 0 auto;
+            width: fit-content;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="cube">
+        <div class="face front"></div>
+        <div class="face back"></div>
+        <div class="face right"></div>
+        <div class="face left"></div>
+        <div class="face top"></div>
+        <div class="face bottom"></div>
+    </div>
+    <div class="info">
+        ✨ 3D 渐变立方体 | 每个面使用 linear-gradient | hover 时侧面增加 skewY 倾斜效果
+    </div>
+</body>
+</html>
