@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>汽车行驶动画</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #87CEEB 0%, #98D8E8 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            background: #2E5A3E;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+        .info {
+            text-align: center;
+            margin-top: 15px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #1a3a2a;
+        }
+        button {
+            background: #FFD966;
+            border: none;
+            padding: 8px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            margin-top: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 3px 0 #B97F10;
+        }
+        button:hover {
+            background: #FFE28A;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 0 #B97F10;
+        }
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #B97F10;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <div class="info">
+            🚗 小汽车正在行驶 🚗
+            <br>
+            <button id="resetBtn">重置位置</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 小车初始位置（x坐标）
+    let carX = -80;          // 从左侧外开始
+    let carY = 280;          // 垂直位置
+    const carWidth = 70;
+    const carHeight = 35;
+    let speed = 2.2;         // 行驶速度
+
+    // 车轮旋转角度（用于动画）
+    let wheelAngle = 0;
+    
+    // 云朵位置（两个云）
+    let cloud1X = 100;
+    let cloud2X = 500;
+    const cloudSpeed = 0.5;
+    
+    // 道路标线偏移（用于虚线滚动效果）
+    let lineOffset = 0;
+
+    // 动画控制
+    let animationId = null;
+    let lastTimestamp = 0;
+
+    // 重置小车位置
+    function resetCar() {
+        carX = -80;
+        wheelAngle = 0;  // 重置车轮角度
+    }
+
+    // 绘制背景（天空、草地、道路）
+    function drawBackground() {
+        // 天空渐变
+        const gradSky = ctx.createLinearGradient(0, 0, 0, 200);
+        gradSky.addColorStop(0, '#C6E9FF');
+        gradSky.addColorStop(1, '#E0F2FE');
+        ctx.fillStyle = gradSky;
+        ctx.fillRect(0, 0, canvas.width, 240);
+        
+        // 草地
+        ctx.fillStyle = '#5D9B4B';
+        ctx.fillRect(0, 240, canvas.width, 80);
+        
+        // 道路（灰色）
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(0, 290, canvas.width, 60);
+        
+        // 道路中线（黄色虚线，滚动效果）
+        ctx.beginPath();
+        ctx.strokeStyle = '#FFD966';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([25, 35]);
+        for (let y = 0; y < 2; y++) {
+            ctx.beginPath();
+            ctx.moveTo(lineOffset % 60 - 60, 320);
+            ctx.lineTo(canvas.width + (lineOffset % 60), 320);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]); // 恢复实线
+        
+        // 道路两侧白线
+        ctx.beginPath();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 3;
+        ctx.moveTo(0, 305);
+        ctx.lineTo(canvas.width, 305);
+        ctx.moveTo(0, 345);
+        ctx.lineTo(canvas.width, 345);
+        ctx.stroke();
+        
+        // 小太阳
+        ctx.fillStyle = '#FFF5B0';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#FFE484';
+        ctx.beginPath();
+        ctx.arc(720, 65, 35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFD966';
+        ctx.beginPath();
+        ctx.arc(720, 65, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // 云朵
+        function drawCloud(x, y) {
+            ctx.fillStyle = '#FFFFFFF0';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(0,0,0,0.1)';
+            ctx.beginPath();
+            ctx.arc(x, y, 28, 0, Math.PI*2);
+            ctx.arc(x+28, y-12, 32, 0, Math.PI*2);
+            ctx.arc(x-22, y-8, 30, 0, Math.PI*2);
+            ctx.arc(x+12, y+5, 26, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        drawCloud(cloud1X, 55);
+        drawCloud(cloud2X, 88);
+    }
+
+    // 绘制小车（带车轮旋转效果）
+    function drawCar(x, y, angleRad) {
+        // 车身
+        ctx.fillStyle = '#E34234';  // 红色车身
+        ctx.shadowBlur = 0;
+        ctx.fillRect(x, y, carWidth, carHeight);
+        
+        // 车顶（弧形）
+        ctx.fillStyle = '#C02A1E';
+        ctx.beginPath();
+        ctx.rect(x + 12, y - 18, 46, 22);
+        ctx.fill();
+        
+        // 车窗
+        ctx.fillStyle = '#A5D0E5';
+        ctx.fillRect(x + 18, y - 14, 14, 14);
+        ctx.fillRect(x + 38, y - 14, 14, 14);
+        
+        // 车灯
+        ctx.fillStyle = '#F4C542';
+        ctx.fillRect(x + carWidth - 8, y + 8, 6, 12);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x + 2, y + 8, 6, 12);
+        
+        // 车轮（带旋转效果）
+        const wheelRadius = 9;
+        const wheelY = y + carHeight - 6;
+        
+        // 左前轮
+        ctx.save();
+        ctx.translate(x + 12, wheelY);
+        ctx.rotate(angleRad);
+        ctx.fillStyle = '#2C2C2C';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius-3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        
+        // 右前轮
+        ctx.save();
+        ctx.translate(x + carWidth - 12, wheelY);
+        ctx.rotate(angleRad);
+        ctx.fillStyle = '#2C2C2C';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius-3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        
+        // 左后轮
+        ctx.save();
+        ctx.translate(x + 12, wheelY);
+        ctx.rotate(angleRad);
+        ctx.fillStyle = '#2C2C2C';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius-3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        
+        // 右后轮
+        ctx.save();
+        ctx.translate(x + carWidth - 12, wheelY);
+        ctx.rotate(angleRad);
+        ctx.fillStyle = '#2C2C2C';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(0, 0, wheelRadius-3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        
+        // 轮毂装饰
+        ctx.fillStyle = '#BBBBBB';
+        ctx.beginPath();
+        ctx.arc(x + 12, wheelY, 3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + carWidth - 12, wheelY, 3, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    // 更新动画逻辑
+    function update() {
+        // 小车移动
+        carX += speed;
+        // 超出右侧边界则重置到左侧
+        if (carX > canvas.width + 50) {
+            carX = -carWidth - 20;
+        }
+        
+        // 车轮旋转：速度越快旋转越快（speed 越大）
+        wheelAngle += speed * 0.12;
+        
+        // 道路虚线滚动
+        lineOffset += speed * 1.5;
+        
+        // 云朵飘移
+        cloud1X -= cloudSpeed;
+        cloud2X -= cloudSpeed * 0.7;
+        if (cloud1X < -100) cloud1X = canvas.width + 80;
+        if (cloud2X < -120) cloud2X = canvas.width + 100;
+    }
+
+    // 绘制所有元素
+    function draw() {
+        drawBackground();
+        drawCar(carX, carY, wheelAngle);
+        
+        // 绘制一点小装饰：路面小石子
+        ctx.fillStyle = '#6B4E3A';
+        for (let i = 0; i < 12; i++) {
+            let stoneX = (lineOffset + i * 67) % canvas.width;
+            ctx.beginPath();
+            ctx.ellipse(stoneX, 334, 2, 1.5, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+        
+        // 简单添加远处的小鸟（静态装饰）
+        ctx.fillStyle = '#3C3C3C';
+        ctx.beginPath();
+        ctx.moveTo(560, 45);
+        ctx.quadraticCurveTo(565, 40, 570, 45);
+        ctx.quadraticCurveTo(565, 50, 560, 45);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(620, 70);
+        ctx.quadraticCurveTo(625, 65, 630, 70);
+        ctx.quadraticCurveTo(625, 75, 620, 70);
+        ctx.fill();
+    }
+
+    // 动画主循环
+    function animate() {
+        update();
+        draw();
+        requestAnimationFrame(animate);
+    }
+
+    // 重置按钮事件
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        resetCar();
+    });
+
+    // 启动动画
+    animate();
+</script>
+</body>
+</html>
