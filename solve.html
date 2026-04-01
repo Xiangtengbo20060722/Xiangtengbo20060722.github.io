@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>一元二次方程求解器</title>
+</head>
+<body>
+    <h1>一元二次方程求解器</h1>
+    <p>请按照提示输入系数 a, b, c（方程格式：ax² + bx + c = 0）</p >
+    <p>注意：程序假设 a > 0 且判别式 delta ≥ 0。</p >
+
+    <script>
+        // (1) 调用三次 prompt 获取系数
+        let aInput = prompt("请输入二次项系数 a (a > 0):");
+        let bInput = prompt("请输入一次项系数 b:");
+        let cInput = prompt("请输入常数项 c:");
+
+        // (2) 使用 parseFloat 转换为数字
+        let a = parseFloat(aInput);
+        let b = parseFloat(bInput);
+        let c = parseFloat(cInput);
+
+        // 验证输入是否为有效数字，并确保 a > 0（题目假设）
+        if (isNaN(a) || isNaN(b) || isNaN(c)) {
+            alert("错误：请输入有效的数字！");
+            console.log("错误：输入了非数字内容。");
+        } else if (a <= 0) {
+            alert("错误：二次项系数 a 必须大于 0！");
+            console.log("错误：a = " + a + "，不满足 a > 0 的条件。");
+        } else {
+            // (3) 计算判别式 delta
+            let delta = b * b - 4 * a * c;
+            console.log("判别式 delta = " + delta);
+
+            // 题目假设 delta >= 0，但为了友好，仍做检查
+            if (delta < 0) {
+                alert("警告：判别式 delta = " + delta + " 小于 0，程序假设 delta ≥ 0，结果可能为复数。");
+                console.log("警告：delta < 0，未考虑复数解。");
+            }
+
+            // (4) 计算两个根
+            let sqrtDelta = Math.sqrt(delta);
+            let x1 = (-b + sqrtDelta) / (2 * a);
+            let x2 = (-b - sqrtDelta) / (2 * a);
+
+            // 格式化结果，保留合适小数位数（避免过长）
+            let resultMsg = "方程 " + a + "x² + " + b + "x + " + c + " = 0 的解为：\n" +
+                            "x₁ = " + x1 + "\n" +
+                            "x₂ = " + x2;
+            
+            // (5) 使用 alert 告知用户
+            alert(resultMsg);
+
+            // (6) 使用 console.log 输出相同结果
+            console.log(resultMsg);
+            console.log("详细：delta = " + delta + ", sqrt(delta) = " + sqrtDelta);
+        }
+    </script>
+</body>
+</html>
