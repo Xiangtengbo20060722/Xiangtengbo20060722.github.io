@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>3D 汉诺塔 | 益智学习游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* 避免拖动时选中文字 */
+        }
+
+        body {
+            background: linear-gradient(145deg, #b8d0e6 0%, #9bb7d4 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Poppins', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            perspective: 800px;
+        }
+
+        /* 主游戏面板 */
+        .game-container {
+            max-width: 1300px;
+            width: 100%;
+            background: rgba(255, 248, 225, 0.96);
+            backdrop-filter: blur(3px);
+            border-radius: 2.5rem;
+            box-shadow: 0 30px 40px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255,255,255,0.6);
+            padding: 1.8rem 1.5rem 2rem;
+            transition: all 0.2s;
+        }
+
+        /* 头部区域 */
+        .game-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1.8rem;
+            border-bottom: 3px solid #f4b942;
+            padding-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #c4450c, #f39c12);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+        }
+        .stats-panel {
+            display: flex;
+            gap: 1.2rem;
+            background: #2c3e4e;
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            box-shadow: inset 0 -1px 0 #1e2f3a, 0 5px 10px rgba(0,0,0,0.1);
+        }
+        .stats-panel span {
+            background: #f39c12;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            color: #1a2c3e;
+            margin-left: 8px;
+        }
+
+        /* 控制栏 */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0 1.5rem;
+        }
+        .disk-selector {
+            background: #fdebd0;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: bold;
+            box-shadow: inset 0 0 0 1px #fff8, 0 3px 8px rgba(0,0,0,0.1);
+        }
+        input[type="range"] {
+            width: 180px;
+        }
+        button {
+            background: #2c5f8a;
+            border: none;
+            padding: 0.5rem 1.4rem;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s linear;
+            box-shadow: 0 3px 0 #143250;
+            font-family: inherit;
+        }
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #143250;
+        }
+        button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+        .btn-reset { background: #e67e22; box-shadow: 0 3px 0 #b45f1b; }
+        .btn-auto { background: #27ae60; box-shadow: 0 3px 0 #1e6b3e; }
+        .warning-area {
+            text-align: center;
+            margin: 0.8rem auto 0;
+            font-weight: bold;
+            color: #c0392b;
+            background: #fae5e2;
+            border-radius: 40px;
+            padding: 0.5rem;
+            width: fit-content;
+            max-width: 90%;
+            transition: 0.2s;
+            animation: fadeOutWarning 2s ease forwards;
+        }
+
+        /* 3D 游戏盘区 — 透视容器 */
+        .hanoi-stage {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            gap: 1rem;
+            margin: 2rem 0 1rem;
+            padding: 1rem 0.5rem;
+            background: rgba(0,0,0,0.08);
+            border-radius: 3rem;
+            perspective: 1000px;
+        }
+
+        /* 每个柱子容器 */
+        .peg-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .peg-wrapper.selected-peg {
+            transform: scale(1.02);
+            filter: drop-shadow(0 0 8px gold);
+        }
+        /* 3D柱子 */
+        .peg {
+            width: 20px;
+            height: 200px;
+            background: linear-gradient(90deg, #8b5a2b, #c98a3e, #a5682a);
+            border-radius: 20px 20px 8px 8px;
+            box-shadow: 8px 0 12px rgba(0,0,0,0.3), inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.4);
+            transform: rotateX(4deg) translateZ(2px);
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .peg-base {
+            width: 100px;
+            height: 20px;
+            background: #b87c3a;
+            border-radius: 20px;
+            margin-top: -6px;
+            box-shadow: 0 8px 12px rgba(0,0,0,0.2), inset 0 1px 2px #ffdd99;
+            transform: translateZ(0px);
+        }
+        .peg-label {
+            margin-top: 8px;
+            font-weight: bold;
+            background: #fff3cf;
+            padding: 3px 12px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            box-shadow: inset 0 0 0 1px #ffe2a4;
+        }
+
+        /* 磁盘容器 - 绝对定位相对柱子 */
+        .disks-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            justify-content: flex-start;
+            height: 210px;
+            margin-bottom: -10px;
+        }
+
+        /* 每个磁盘样式: 3D 立体感 */
+        .disk {
+            height: 28px;
+            border-radius: 20px;
+            margin: 2px 0;
+            background: radial-gradient(circle at 30% 35%, #ffcf7a, #e09d32);
+            box-shadow: 0 5px 0 rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,200,0.9);
+            transition: all 0.1s ease;
+            border: 1px solid rgba(255,215,120,0.8);
+            transform: translateZ(2px);
+            cursor: pointer;
+        }
+        .disk.selected-disk {
+            box-shadow: 0 0 0 3px #ffdd77, 0 5px 10px black;
+            filter: brightness(1.05);
+            transform: scale(1.01) translateY(-2px);
+        }
+
+        /* 胜利动画 */
+        .victory-glow {
+            animation: victoryFlash 0.8s ease-in-out 3;
+        }
+
+        @keyframes victoryFlash {
+            0% { background-color: rgba(255,215,0,0); box-shadow: 0 0 0 0 gold;}
+            50% { background-color: rgba(255,215,0,0.5); box-shadow: 0 0 30px 15px gold; }
+            100% { background-color: rgba(255,215,0,0); box-shadow: 0 0 0 0 gold;}
+        }
+
+        @keyframes shakeWarning {
+            0% { transform: translateX(0);}
+            25% { transform: translateX(-5px);}
+            75% { transform: translateX(5px);}
+            100% { transform: translateX(0);}
+        }
+
+        @keyframes fadeOutWarning {
+            0% { opacity: 1; transform: scale(1);}
+            70% { opacity: 1;}
+            100% { opacity: 0; visibility: hidden; display: none;}
+        }
+
+        @keyframes diskFloat {
+            0% { transform: translateY(0px) translateZ(2px);}
+            50% { transform: translateY(-12px) translateZ(6px);}
+            100% { transform: translateY(0px) translateZ(2px);}
+        }
+
+        .auto-move-animation {
+            animation: diskFloat 0.25s ease-in-out;
+        }
+
+        .move-counter {
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            margin-top: 2rem;
+            color: #4a5b6e;
+        }
+
+        @media (max-width: 750px) {
+            .disk { height: 24px; }
+            .peg { height: 150px; }
+            .disks-container { height: 160px;}
+            .peg-base { width: 70px; }
+            .game-container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="gameRoot">
+    <div class="game-header">
+        <h1>🏯 3D 汉诺塔 · 智慧之塔</h1>
+        <div class="stats-panel">
+            <div>📊 步数 <span id="moveCountDisplay">0</span></div>
+            <div>💿 圆盘 <span id="diskCountValue">5</span></div>
+        </div>
+    </div>
+    <div class="controls">
+        <div class="disk-selector">
+            <span>🔘 圆盘数量:</span>
+            <input type="range" id="diskSlider" min="3" max="8" value="5" step="1">
+            <output id="sliderVal">5</output>
+        </div>
+        <button id="resetBtn" class="btn-reset">🔄 重置游戏</button>
+        <button id="autoSolveBtn" class="btn-auto">⚡ 自动求解</button>
+    </div>
+    <!-- 警告消息区域 -->
+    <div id="warningMsg" style="min-height: 48px; text-align: center;"></div>
+
+    <!-- 3D 塔架区域 -->
+    <div class="hanoi-stage" id="hanoiStage">
+        <!-- 三个柱子动态生成 JS 填充 -->
+    </div>
+    <footer>✨ 点击圆盘选中(高亮) → 再点击柱子移动 | 自动求解时禁用操作 | 无效移动有警告</footer>
+</div>
+
+<script>
+    // ---------- 游戏核心 (基于 类 + 数组/对象) ----------
+    class HanoiGame3D {
+        constructor(disksCount = 5) {
+            this.disksCount = Math.min(8, Math.max(3, disksCount));
+            // pegs 存储每根柱子上的圆盘尺寸数组 (大数字为大圆盘，小数字为小圆盘，栈顶在数组末尾)
+            this.pegs = [[], [], []];
+            this.moves = 0;
+            this.isAutoSolving = false;
+            this.selectedPegIdx = null;      // 当前选中的圆盘所在的柱子索引
+            this.selectedDiskSize = null;     // 选中的圆盘尺寸
+            this.autoSolveInterval = null;
+            this.moveQueue = [];               // 存储自动求解步骤 {from, to}
+            this.winFlag = false;
+            this.initPegs();
+        }
+
+        initPegs() {
+            // 重置: 所有盘在柱子0, 从大到小顺序存储 (索引0是底部最大, 栈顶是最后一个)
+            this.pegs = [[], [], []];
+            for (let i = this.disksCount; i >= 1; i--) {
+                this.pegs[0].push(i);
+            }
+            this.moves = 0;
+            this.winFlag = false;
+            this.selectedPegIdx = null;
+            this.selectedDiskSize = null;
+            this.stopAutoSolving(false); // 清空自动求解定时器
+        }
+
+        // 检查移动合法性: fromPeg 栈顶 移到 toPeg 栈顶
+        isValidMove(fromIdx, toIdx) {
+            if (fromIdx === toIdx) return false;
+            const fromStack = this.pegs[fromIdx];
+            const toStack = this.pegs[toIdx];
+            if (fromStack.length === 0) return false;
+            const topFrom = fromStack[fromStack.length - 1];
+            if (toStack.length === 0) return true;
+            const topTo = toStack[toStack.length - 1];
+            return topFrom < topTo;
+        }
+
+        // 执行移动 (不渲染, 只改变数据)
+        executeMove(fromIdx, toIdx, incrementMove = true) {
+            if (!this.isValidMove(fromIdx, toIdx)) return false;
+            const fromStack = this.pegs[fromIdx];
+            const disk = fromStack.pop();
+            this.pegs[toIdx].push(disk);
+            if (incrementMove) {
+                this.moves++;
+            }
+            // 清除选中的高亮 (移动后视觉上取消选中)
+            this.selectedPegIdx = null;
+            this.selectedDiskSize = null;
+            return true;
+        }
+
+        checkWin() {
+            // 胜利条件: 所有盘都在第三根柱子 (索引2)
+            const win = (this.pegs[2].length === this.disksCount);
+            if (win && !this.winFlag) {
+                this.winFlag = true;
+                return true;
+            }
+            if (!win) this.winFlag = false;
+            return win;
+        }
+
+        // 获取当前栈顶磁盘大小 (用于显示)
+        getTopDiskSize(pegIdx) {
+            const stack = this.pegs[pegIdx];
+            if (stack.length === 0) return null;
+            return stack[stack.length - 1];
+        }
+
+        // 重置游戏 (保留圆盘数量)
+        resetGame() {
+            if (this.isAutoSolving) this.stopAutoSolving(true);
+            this.initPegs();
+            this.selectedPegIdx = null;
+            this.selectedDiskSize = null;
+            this.winFlag = false;
+            this.renderUI();
+        }
+
+        // 改变磁盘数量
+        setDisksCount(newCount) {
+            if (this.isAutoSolving) this.stopAutoSolving(true);
+            this.disksCount = Math.min(8, Math.max(3, newCount));
+            this.initPegs();
+            this.selectedPegIdx = null;
+            this.selectedDiskSize = null;
+            this.winFlag = false;
+            this.renderUI();
+        }
+
+        // ---------- 自动求解核心 (递归生成移动序列+setTimeout) ----------
+        stopAutoSolving(resetFlag = true) {
+            if (this.autoSolveInterval) {
+                clearTimeout(this.autoSolveInterval);
+                this.autoSolveInterval = null;
+            }
+            this.isAutoSolving = false;
+            this.moveQueue = [];
+            if (resetFlag) {
+                // 启用控件
+                this.enableControls(true);
+            }
+        }
+
+        enableControls(enable) {
+            const slider = document.getElementById('diskSlider');
+            const resetBtn = document.getElementById('resetBtn');
+            const autoBtn = document.getElementById('autoSolveBtn');
+            if (slider) slider.disabled = !enable;
+            if (resetBtn) resetBtn.disabled = !enable;
+            if (autoBtn) autoBtn.disabled = !enable;
+            // 游戏交互禁用: 通过全局标志防止点击事件
+            if (!enable) {
+                document.body.style.pointerEvents = 'auto'; 
+                // 在自动求解时，通过标志阻止移动点击
+            } else {
+                // 恢复完全交互
+            }
+        }
+
+        // 汉诺塔递归生成移动序列 (经典)
+        generateMoves(n, from, to, aux, movesArray) {
+            if (n === 1) {
+                movesArray.push({ from, to });
+                return;
+            }
+            this.generateMoves(n - 1, from, aux, to, movesArray);
+            movesArray.push({ from, to });
+            this.generateMoves(n - 1, aux, to, from, movesArray);
+        }
+
+        startAutoSolve() {
+            if (this.isAutoSolving) return;
+            if (this.winFlag) {
+                this.showWarning("🏆 已经胜利! 请重置后再试。");
+                return;
+            }
+            // 生成最优解序列
+            this.moveQueue = [];
+            this.generateMoves(this.disksCount, 0, 2, 1, this.moveQueue);
+            this.isAutoSolving = true;
+            this.winFlag = false;
+            this.enableControls(false);
+            // 清除选中的
+            this.selectedPegIdx = null;
+            this.selectedDiskSize = null;
+            this.renderUI();
+            this.processAutoStep();
+        }
+
+        processAutoStep() {
+            if (!this.isAutoSolving) return;
+            if (this.moveQueue.length === 0) {
+                // 自动求解结束
+                this.isAutoSolving = false;
+                this.enableControls(true);
+                this.renderUI();
+                // 检查胜利
+                if (this.checkWin()) {
+                    this.showVictoryMessage();
+                }
+                return;
+            }
+            const step = this.moveQueue.shift();
+            const { from, to } = step;
+            if (this.isValidMove(from, to)) {
+                this.executeMove(from, to, true);
+                this.renderUI(true, from, to);  // 带动画
+                if (this.checkWin()) {
+                    this.showVictoryMessage();
+                    // 胜利后结束自动求解
+                    this.isAutoSolving = false;
+                    this.enableControls(true);
+                    this.moveQueue = [];
+                    if (this.autoSolveInterval) clearTimeout(this.autoSolveInterval);
+                    this.renderUI();
+                    return;
+                }
+            } else {
+                // 理论上生成序列一定是合法的, 但防御
+                console.warn("无效序列");
+                this.isAutoSolving = false;
+                this.enableControls(true);
+                this.renderUI();
+                return;
+            }
+            // 设置延迟
+            this.autoSolveInterval = setTimeout(() => {
+                this.processAutoStep();
+            }, 450);
+        }
+
+        // 视觉渲染 & 事件绑定 + 高亮
+        renderUI(animateMove = false, fromPeg = null, toPeg = null) {
+            const stage = document.getElementById('hanoiStage');
+            if (!stage) return;
+            const diskWidths = this.getDiskWidthMap();
+            // 清空并重新构建DOM (干净事件刷新)
+            stage.innerHTML = '';
+            const pegLabels = ['A', 'B', 'C'];
+            for (let i = 0; i < 3; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'peg-wrapper';
+                if (this.selectedPegIdx === i && !this.isAutoSolving) {
+                    wrapper.classList.add('selected-peg');
+                }
+                wrapper.setAttribute('data-peg-idx', i);
+                // 柱子结构
+                const pegDiv = document.createElement('div');
+                pegDiv.className = 'peg';
+                const baseDiv = document.createElement('div');
+                baseDiv.className = 'peg-base';
+                const labelSpan = document.createElement('div');
+                labelSpan.className = 'peg-label';
+                labelSpan.innerText = pegLabels[i];
+                // 磁盘容器
+                const disksContainer = document.createElement('div');
+                disksContainer.className = 'disks-container';
+                disksContainer.style.display = 'flex';
+                disksContainer.style.flexDirection = 'column-reverse';
+                disksContainer.style.alignItems = 'center';
+                disksContainer.style.justifyContent = 'flex-start';
+                disksContainer.style.height = '210px';
+                // 获取当前柱子上的圆盘
+                const stack = [...this.pegs[i]]; // 从小到大底部到顶部，但是我们显示底部最大在上层? 由于flex-direction column-reverse，底部先出现
+                // 按照实际顺序: 栈底在索引0为大，栈顶在末尾为小，但我们希望视觉上底部大在上方排列? 用column-reverse正好底部的div先渲染会出现在下面? 需要调整: 让磁盘从下往上堆叠，正确做法: 渲染顺序底部在下方，顶部在上方。
+                // 由于容器高度固定, 用flex-direction column-reverse 让栈底在视觉最下方，栈顶在上方。
+                for (let idx = 0; idx < stack.length; idx++) {
+                    const diskSize = stack[idx];
+                    const width = diskWidths[diskSize] || 60;
+                    const diskDiv = document.createElement('div');
+                    diskDiv.className = 'disk';
+                    if (animateMove && fromPeg !== null && toPeg !== null) {
+                        // 简单加一点动画效果，如果移动的圆盘属于当前柱子刷新时添加浮起类
+                        diskDiv.style.animation = 'diskFloat 0.25s ease';
+                    }
+                    diskDiv.style.width = `${width}px`;
+                    diskDiv.style.height = '28px';
+                    diskDiv.style.backgroundColor = this.getDiskColor(diskSize, this.disksCount);
+                    diskDiv.style.background = `radial-gradient(circle at 30% 40%, ${this.getDiskColor(diskSize, this.disksCount)}, ${this.getDarkColor(diskSize)})`;
+                    diskDiv.style.margin = '2px 0';
+                    diskDiv.style.borderRadius = '20px';
+                    diskDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,200,0.8)';
+                    diskDiv.setAttribute('data-peg', i);
+                    diskDiv.setAttribute('data-size', diskSize);
+                    // 高亮当前选中的磁盘 (选中的圆盘)
+                    if (!this.isAutoSolving && this.selectedPegIdx === i && this.selectedDiskSize === diskSize && idx === stack.length-1) {
+                        diskDiv.classList.add('selected-disk');
+                    }
+                    disksContainer.appendChild(diskDiv);
+                }
+                wrapper.appendChild(pegDiv);
+                wrapper.appendChild(disksContainer);
+                wrapper.appendChild(baseDiv);
+                wrapper.appendChild(labelSpan);
+                // 添加点击事件 (通过事件委托或者直接监听)
+                wrapper.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.isAutoSolving || this.winFlag) {
+                        this.showWarning("自动求解中或游戏已胜利，请等待或重置");
+                        return;
+                    }
+                    const pegIndex = parseInt(wrapper.getAttribute('data-peg-idx'));
+                    this.handlePegClick(pegIndex);
+                });
+                stage.appendChild(wrapper);
+            }
+            // 更新计数值
+            document.getElementById('moveCountDisplay').innerText = this.moves;
+            document.getElementById('diskCountValue').innerText = this.disksCount;
+        }
+
+        handlePegClick(clickedPegIdx) {
+            if (this.isAutoSolving || this.winFlag) return;
+            // 情况1: 没有任何选中的磁盘 -> 尝试选中该柱子顶部的磁盘
+            if (this.selectedPegIdx === null) {
+                const topSize = this.getTopDiskSize(clickedPegIdx);
+                if (topSize !== null) {
+                    this.selectedPegIdx = clickedPegIdx;
+                    this.selectedDiskSize = topSize;
+                    this.renderUI();
+                } else {
+                    this.showWarning("❌ 柱子上没有圆盘可选！");
+                }
+                return;
+            }
+            // 情况2: 已有选中的磁盘, 尝试移动
+            const fromIdx = this.selectedPegIdx;
+            const toIdx = clickedPegIdx;
+            if (this.isValidMove(fromIdx, toIdx)) {
+                this.executeMove(fromIdx, toIdx, true);
+                this.selectedPegIdx = null;
+                this.selectedDiskSize = null;
+                this.renderUI();
+                // 胜利检测
+                if (this.checkWin()) {
+                    this.showVictoryMessage();
+                    this.renderUI();
+                }
+            } else {
+                this.showWarning("🚫 无效移动：大圆盘不能放到小圆盘上！");
+                // 清空选中（体验优化，或者不清？规范亦可不清，但建议取消高亮，重新选）
+                this.selectedPegIdx = null;
+                this.selectedDiskSize = null;
+                this.renderUI();
+            }
+        }
+
+        getDiskWidthMap() {
+            const map = {};
+            const minW = 55;
+            const maxW = 190;
+            for (let i = 1; i <= this.disksCount; i++) {
+                // 圆盘尺寸越大宽度越大
+                const ratio = (i) / (this.disksCount);
+                map[i] = minW + ratio * (maxW - minW);
+            }
+            return map;
+        }
+
+        getDiskColor(size, total) {
+            const hue = (size * 35) % 360;
+            return `hsl(${hue}, 75%, 60%)`;
+        }
+        getDarkColor(size) {
+            const hue = (size * 35) % 360;
+            return `hsl(${hue}, 70%, 40%)`;
+        }
+
+        showWarning(msg) {
+            const warnDiv = document.getElementById('warningMsg');
+            if (!warnDiv) return;
+            warnDiv.innerHTML = `<div class="warning-area" style="animation: shakeWarning 0.4s, fadeOutWarning 2s forwards;">⚠️ ${msg}</div>`;
+            setTimeout(() => {
+                if (warnDiv.firstChild && warnDiv.firstChild.classList && warnDiv.firstChild.classList.contains('warning-area')) {
+                    warnDiv.innerHTML = '';
+                }
+            }, 2000);
+        }
+
+        showVictoryMessage() {
+            const stageDiv = document.querySelector('.hanoi-stage');
+            if (stageDiv) {
+                stageDiv.classList.add('victory-glow');
+                setTimeout(() => stageDiv.classList.remove('victory-glow'), 1300);
+            }
+            this.showWarning("🎉 完美！ 汉诺塔通关！ 🎉");
+            this.winFlag = true;
+            this.renderUI();
+            if (this.isAutoSolving) {
+                this.stopAutoSolving(true);
+            }
+        }
+    }
+
+    // ---------- 页面初始化及事件绑定 ----------
+    let game = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const slider = document.getElementById('diskSlider');
+        const sliderVal = document.getElementById('sliderVal');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoBtn = document.getElementById('autoSolveBtn');
+
+        function initGame(diskCount) {
+            if (game && game.isAutoSolving) game.stopAutoSolving(true);
+            game = new HanoiGame3D(diskCount);
+            game.renderUI();
+        }
+
+        const startCount = parseInt(slider.value);
+        initGame(startCount);
+        sliderVal.innerText = startCount;
+
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            sliderVal.innerText = val;
+        });
+        slider.addEventListener('change', (e) => {
+            if (game && game.isAutoSolving) {
+                game.showWarning("请等待自动求解结束或手动重置");
+                return;
+            }
+            const newVal = parseInt(e.target.value);
+            if (game) {
+                game.setDisksCount(newVal);
+                game.renderUI();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (game) {
+                if (game.isAutoSolving) game.stopAutoSolving(true);
+                game.resetGame();
+                game.renderUI();
+            }
+        });
+
+        autoBtn.addEventListener('click', () => {
+            if (game && !game.isAutoSolving && !game.winFlag) {
+                game.startAutoSolve();
+            } else if (game && game.winFlag) {
+                game.showWarning("游戏已胜利，请按[重置]后再自动求解");
+            } else if (game && game.isAutoSolving) {
+                game.showWarning("自动求解进行中...");
+            }
+        });
+    });
+</script>
+</body>
+</html>
